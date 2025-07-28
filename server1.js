@@ -2,11 +2,11 @@ const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const bodyParser = require('body-parser');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 const app = express();
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-// Stripe Webhook (raw body nötig!)
+// Nur für diesen Pfad: raw Body!
 app.post('/webhook', bodyParser.raw({ type: 'application/json' }), (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
@@ -20,10 +20,11 @@ app.post('/webhook', bodyParser.raw({ type: 'application/json' }), (req, res) =>
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
-    const email = session.customer_details?.email || 'unknown';
-    const message = `🔥 Zahlung erfolgreich!\nDanke ${email}!\nHier ist dein VIP-Zugang:\n👉 https://t.me/+wHrW2cF4Z5VmMDM0`;
+    const email = session.customer_details?.email || 'Unbekannt';
 
     const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
+    const message = `🔥 Zahlung erfolgreich!\nDanke ${email}!\nHier ist dein VIP-Zugang:\n👉 https://t.me/+wHrW2cF4Z5VmMDM0`;
+
     bot.sendMessage(process.env.TELEGRAM_CHAT_ID, message);
   }
 
