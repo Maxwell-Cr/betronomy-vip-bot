@@ -6,15 +6,16 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const app = express();
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-// Nur für diesen Pfad: raw Body!
-app.post('/webhook', bodyParser.raw({ type: 'application/json' }), (req, res) => {
+// Nur für Stripe Webhook: rohen Body verwenden!
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   const sig = req.headers['stripe-signature'];
+
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
   } catch (err) {
-    console.error('❌ Stripe Webhook Error:', err.message);
+    console.error(`Webhook Error: ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
