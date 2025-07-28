@@ -1,35 +1,42 @@
 const express = require('express');
-const TelegramBot = require('node-telegram-bot-api');
-const bodyParser = require('body-parser');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
 const app = express();
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const TelegramBot = require('node-telegram-bot-api');
 
-// Nur für Stripe Webhook: rohen Body verwenden!
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+const telegramGroup = process.env.TELEGRAM_GROUP_ID;
+
+const bot = new TelegramBot(telegramToken, { polling: false });
+
+// 🔥 Optional: Root-Route anzeigen
+app.get('/', (req, res) => {
+  res.send('🔥 Betronomy VIP Bot is running!');
+});
+
+// 🔐 RAW Body für Stripe Webhook
 app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   const sig = req.headers['stripe-signature'];
-
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
   } catch (err) {
-    console.error(`Webhook Error: ${err.message}`);
+    console.error('Webhook Error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  // Nur bei erfolgreichem Kauf
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
-    const email = session.customer_details?.email || 'Unbekannt';
+    const email = session.customer_email;
 
-    const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
-    const message = `🔥 Zahlung erfolgreich!\nDanke ${email}!\nHier ist dein VIP-Zugang:\n👉 https://t.me/+wHrW2cF4Z5VmMDM0`;
-
-    bot.sendMessage(process.env.TELEGRAM_CHAT_ID, message);
+    bot.sendMessage(telegramGroup, `✅ Neue VIP Anmeldung: ${email}`);
   }
 
-  res.status(200).end();
+  res.sendStatus(200);
 });
 
-app.listen(3000, () => console.log('✅ Server läuft auf Port 3000'));
+// ✅ Server starten
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server ready on port ${PORT}`));
