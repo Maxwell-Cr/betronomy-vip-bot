@@ -9,7 +9,7 @@ const paidEmails = []; // Temporärer Speicher für E-Mails
 const app = express();
 app.use(bodyParser.raw({ type: 'application/json' }));
 
-const bot = new TelegramBot('7659647125:AAF_6pQfQAZw4Ab_1oQVW1niacQqd3IcE9Y', { polling: true }); // ⬅️ Dein Telegram Bot Token
+const bot = new TelegramBot('7659647125:AAF_6pQfQAZw4Ab_1oQVW1niacQqd3IcE9Y'); // ⬅️ Dein Telegram Bot Token
 const inviteLink = 'https://t.me/+wHrW2cF4Z5VmMDM0'; // ⬅️ Dein VIP Telegram Link
 
 app.post('/webhook', (req, res) => {
