@@ -51,7 +51,7 @@ bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, '👋 Welcome to Betronomy VIP!\nPlease send the email address you used to pay.');
 
-  bot.once('message', function handleEmailResponse(emailMsg) {
+bot.once('message', function handleEmailResponse(emailMsg) {
   const email = emailMsg.text?.trim().toLowerCase();
   const chatId = emailMsg.chat.id;
 
