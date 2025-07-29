@@ -51,14 +51,18 @@ bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, '👋 Welcome to Betronomy VIP!\nPlease send the email address you used to pay.');
 
-  bot.once('message', (emailMsg) => {
-    const email = emailMsg.text.trim().toLowerCase();
-    if (paidEmails.includes(email)) {
-      bot.sendMessage(chatId, `✅ Payment recognized. Here is your VIP access:\n👉 https://t.me/+wHrW2cF4Z5VmMDM0`);
-    } else {
-      bot.sendMessage(chatId, `❌ Email not found. Please check or contact @captain_betronomy`);
-    }
-  });
+  bot.once('message', function handleEmailResponse(emailMsg) {
+  const email = emailMsg.text?.trim().toLowerCase();
+  const chatId = emailMsg.chat.id;
+
+  if (chatId !== msg.chat.id) return; // Nur antworten, wenn vom gleichen Chat
+
+  if (paidEmails.includes(email)) {
+    bot.sendMessage(chatId, `✅ Payment recognized. Here is your VIP access:\n👉 https://t.me/+wHrW2cF4Z5VmMDM0`);
+  } else {
+    bot.sendMessage(chatId, `❌ Email not found. Please check or contact @captain_betronomy`);
+  }
 });
+
 
 app.listen(3000, () => console.log('🚀 Server is running on port 3000'));
