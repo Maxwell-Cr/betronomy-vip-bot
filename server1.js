@@ -1,68 +1,66 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const TelegramBot = require('node-telegram-bot-api');
-const stripe = require('stripe')('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');
-const endpointSecret = 'whsec_GyBq4cWsVQ7fC3oglrF849uni4eQpWfP';
-const botToken = '7659647125:AAF_6pQfQAZw4Ab_1oQVW1niacQqd3IcE9Y';
+const express = require("express");
+const bodyParser = require("body-parser");
+const TelegramBot = require("node-telegram-bot-api");
+const stripe = require("stripe")("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");
+const fs = require("fs");
 
 const app = express();
-const bot = new TelegramBot(botToken);
+const bot = new TelegramBot("7659647125:AAF_6pQfQAZw4Ab_1oQVW1niacQqd3IcE9Y", { polling: true });
 
-// 🟢 Telegram Webhook
-bot.setWebHook(`https://betronomy-vip-bot.onrender.com/bot${botToken}`);
+// ✅ Stripe Webhook Setup (raw body required!)
+app.use(
+  "/webhook",
+  express.raw({ type: "application/json" })
+);
 
-// 👉 Stripe braucht *rohen* Body
-app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
-  const sig = req.headers['stripe-signature'];
+// 📁 Fake DB: Bezahlte E-Mails (temporär)
+let paidEmails = [];
+
+app.post("/webhook", (req, res) => {
+  const sig = req.headers["stripe-signature"];
+
   let event;
-
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      "whsec_GyBq4cWsVQ7fC3oglrF849uni4eQpWfP"
+    );
   } catch (err) {
-    console.error('❌ Stripe Webhook Error:', err.message);
+    console.log("❌ Webhook Error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // ✅ Handle Checkout Success
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const customerEmail = session.customer_details.email;
-
-    if (customerEmail) {
-      paidEmails.push(customerEmail.toLowerCase());
-      bot.sendMessage('-1002519491519', `🔥 VIP bezahlt: ${customerEmail}`);
+  // ✅ Successful payment
+  if (event.type === "checkout.session.completed") {
+    const email = event.data.object.customer_email.toLowerCase();
+    if (!paidEmails.includes(email)) {
+      paidEmails.push(email);
+      console.log("✅ New paid email added:", email);
     }
   }
 
-  res.status(200).end();
+  res.json({ received: true });
 });
 
-// 🟢 Alles andere: JSON erlaubt
-app.use(bodyParser.json());
-
-// ✅ Telegram-Webhook-Empfang
-app.post(`/bot${botToken}`, (req, res) => {
-  bot.processUpdate(req.body);
-  res.sendStatus(200);
-});
-
-// 🟢 Telegram /start
+// 🟣 Telegram Bot
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, '👋 Welcome to Betronomy VIP!\nPlease send the email address you used to pay.');
+  bot.sendMessage(chatId, `👋 Welcome to Betronomy VIP!\nPlease send the email address you used to pay.`);
 
-bot.once('message', function handleEmailResponse(emailMsg) {
-  const email = emailMsg.text?.trim().toLowerCase();
-  const chatId = emailMsg.chat.id;
+  bot.once("message", (emailMsg) => {
+    if (emailMsg.chat.id !== chatId) return;
 
-  if (chatId !== msg.chat.id) return; // Nur antworten, wenn vom gleichen Chat
-
-  if (paidEmails.includes(email)) {
-    bot.sendMessage(chatId, `✅ Payment recognized. Here is your VIP access:\n👉 https://t.me/+wHrW2cF4Z5VmMDM0`);
-  } else {
-    bot.sendMessage(chatId, `❌ Email not found. Please check or contact @captain_betronomy`);
-  }
+    const email = emailMsg.text.trim().toLowerCase();
+    if (paidEmails.includes(email)) {
+      bot.sendMessage(chatId, `✅ Payment recognized. Here is your VIP access:\n👉 https://t.me/+wHrW2cF4Z5VmMDM0`);
+    } else {
+      bot.sendMessage(chatId, `❌ Email not found. Please check or contact @captain_betronomy`);
+    }
+  });
 });
 
-
-app.listen(3000, () => console.log('🚀 Server is running on port 3000'));
+// 🚀 Start Server
+app.listen(3000, () => {
+  console.log("🔥 Server is running on port 3000");
+});
